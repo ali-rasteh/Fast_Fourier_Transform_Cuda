@@ -10,7 +10,36 @@ void cpuKernel(float* X_serial_r, float* X_serial_i, int n, float* tmp_r, float*
 void gpuKernels(float* x_r, float* x_i, float* X_r, float* X_i, unsigned int N, unsigned int M, unsigned int SIMPLE, double* gpu_kernel_time);
 // =================================================================================
 
+
+
+
+
+/**
+ * @file fft_main.cu
+ * @brief Main program for performing Fast Fourier Transform (FFT) using CUDA.
+ *
+ * This program performs FFT on a given set of data using both CPU and GPU, and compares their performance.
+ *
+ * @param argc Number of command line arguments.
+ * @param argv Array of command line arguments.
+ *
+ * The command line arguments are used to get the parameters for the FFT calculation.
+ *
+ * The program performs the following steps:
+ * 1. Retrieves and prints the CUDA device properties.
+ * 2. Gets the parameters from the command line.
+ * 3. Allocates memory on the CPU for the input and output data.
+ * 4. Fills the input arrays with random values.
+ * 5. Performs FFT on the CPU and measures the time taken.
+ * 6. Performs FFT on the GPU and measures the time taken.
+ * 7. Calculates the mean squared error (MSE) between the CPU and GPU results.
+ * 8. Prints the results including the time taken by CPU and GPU, and the MSE.
+ * 9. Frees the allocated memory.
+ *
+ * @note The program contains commented-out code for debugging and verification purposes.
+ */
 int main(int argc, char *argv[]) {
+
 
     struct cudaDeviceProp p;
     cudaGetDeviceProperties(&p, 0);
@@ -118,7 +147,25 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+
+
 //-----------------------------------------------------------------------------
+/**
+ * @brief Executes FFT on the GPU using either a simple or efficient kernel.
+ *
+ * This function allocates memory on the GPU, transfers input data from the host to the device,
+ * executes the selected FFT kernel, and transfers the results back to the host. It also measures
+ * the time taken by the GPU kernel execution.
+ *
+ * @param x_r Pointer to the real part of the input signal on the host.
+ * @param x_i Pointer to the imaginary part of the input signal on the host.
+ * @param X_r Pointer to the real part of the output signal on the host.
+ * @param X_i Pointer to the imaginary part of the output signal on the host.
+ * @param N The number of elements in the input signal.
+ * @param M The number of stages in the FFT.
+ * @param SIMPLE Flag to select between simple (1) and efficient (0) FFT kernel.
+ * @param gpu_kernel_time Pointer to a double variable to store the elapsed time of the GPU kernel execution.
+ */
 void gpuKernels(float* x_r, float* x_i, float* X_r, float* X_i, unsigned int N, unsigned int M, unsigned int SIMPLE, double* gpu_kernel_time) {
     float* x_r_d;
     float* x_i_d;
@@ -148,7 +195,26 @@ void gpuKernels(float* x_r, float* x_i, float* X_r, float* X_i, unsigned int N, 
     HANDLE_ERROR(cudaFree(X_r_d));
     HANDLE_ERROR(cudaFree(X_i_d));
 }
+
+
+
 //-----------------------------------------------------------------------------
+/**
+ * @brief Perform the Fast Fourier Transform (FFT) on the input arrays.
+ *
+ * This function recursively computes the FFT of the input arrays X_serial_r and X_serial_i,
+ * which represent the real and imaginary parts of the input signal, respectively.
+ *
+ * @param X_serial_r Pointer to the array containing the real part of the input signal.
+ * @param X_serial_i Pointer to the array containing the imaginary part of the input signal.
+ * @param n The size of the input arrays. Must be a power of 2.
+ * @param tmp_r Pointer to a temporary array for storing intermediate real values.
+ * @param tmp_i Pointer to a temporary array for storing intermediate imaginary values.
+ *
+ * The function performs the FFT by recursively dividing the input arrays into even and odd
+ * indexed elements, computing the FFT on these subarrays, and then combining the results.
+ * The results are stored back in the input arrays X_serial_r and X_serial_i.
+ */
 void cpuKernel(float* X_serial_r, float* X_serial_i, int n, float* tmp_r, float* tmp_i) {
 	if(n > 1) {	// otherwise, do nothing and return
 		int k, m;
@@ -177,7 +243,27 @@ void cpuKernel(float* X_serial_r, float* X_serial_i, int n, float* tmp_r, float*
 	}
 	return;
 }
+
+
 //-----------------------------------------------------------------------------
+/**
+ * @brief Parses and validates command line arguments to set FFT parameters.
+ *
+ * This function takes command line arguments and extracts the values for SIMPLE and M.
+ * It also calculates the value of N as 2 raised to the power of M.
+ * If the arguments are invalid, it prints an error message and exits the program.
+ *
+ * @param argc The number of command line arguments.
+ * @param argv The array of command line arguments.
+ * @param N Reference to an unsigned int where the calculated value of N will be stored.
+ * @param M Reference to an unsigned int where the value of M will be stored.
+ * @param SIMPLE Reference to an unsigned int where the value of SIMPLE will be stored.
+ *
+ * @note The program expects exactly 3 arguments:
+ *       - argv[1]: SIMPLE (must be 0 or 1)
+ *       - argv[2]: M (must be between 0 and 25)
+ *       If the arguments do not meet these criteria, the program will print an error message and exit.
+ */
 void get_inputs(int argc, char *argv[], unsigned int& N, unsigned int& M, unsigned int& SIMPLE)
 {
     if (
@@ -196,11 +282,38 @@ void get_inputs(int argc, char *argv[], unsigned int& N, unsigned int& M, unsign
 	M = atoi(argv[2]);
     N = (1 << M);
 }
+
+
 //-----------------------------------------------------------------------------
+/**
+ * @brief Fills an array with random float values.
+ *
+ * This function populates the provided array with random float values
+ * in the range of -8 to 8.
+ *
+ * @param data Pointer to the array to be filled.
+ * @param size The number of elements in the array.
+ */
 void fill(float* data, int size) {
     for (int i = 0; i < size; i++)
         data[i] = (float)(rand() % 17 - 8);
 }
+
+
+/**
+ * @brief Calculates the Mean Squared Error (MSE) between two sets of complex data.
+ *
+ * This function computes the MSE between two complex data sets represented by their
+ * real and imaginary parts. The MSE is calculated as the sum of the squared differences
+ * between corresponding real and imaginary parts of the two data sets.
+ *
+ * @param data1_r Pointer to the array containing the real parts of the first data set.
+ * @param data1_i Pointer to the array containing the imaginary parts of the first data set.
+ * @param data2_r Pointer to the array containing the real parts of the second data set.
+ * @param data2_i Pointer to the array containing the imaginary parts of the second data set.
+ * @param size The number of elements in each data set.
+ * @return The calculated Mean Squared Error (MSE) as a double.
+ */
 double calc_mse(float* data1_r, float* data1_i, float* data2_r, float* data2_i, int size) {
     double mse = 0.0;
     int i;
